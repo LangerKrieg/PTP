@@ -25,14 +25,8 @@ private:
     void ConfigureDevice();
     void InitializeDevice();
 
-    static snd_pcm_format_t string_to_format(const std::string &str);
-    static snd_pcm_stream_t string_to_mode(const std::string &str);
-
 public:
-    // There is two types of Constructor. One is needed for receive strings.
-    Device(const std::string &hw, const std::string &format, const std::string &mode,
-        unsigned int rate = 8000, unsigned int channels = 1);
-    Device(const std::string &hw, snd_pcm_format_t format, snd_pcm_stream_t mode,
+    Device(const std::string &hw, snd_pcm_stream_t mode, snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE,
         unsigned int rate = 8000, unsigned int channels = 1);
     ~Device();
 
