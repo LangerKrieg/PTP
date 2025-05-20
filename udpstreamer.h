@@ -1,31 +1,35 @@
+//
+// Created by kuki on 5/19/25.
+//
+
 #ifndef UDPSTREAMER_H
 #define UDPSTREAMER_H
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <cstring>
-#include <cerrno>
-#include <vector>
+
 #include <string>
-#include "Buffer.h"
+#include <netinet/in.h>
 
 class UdpStreamer {
 public:
-    UdpStreamer();
+    UdpStreamer(const std::string& local_ip, int local_port,
+                const std::string& remote_ip, int remote_port);
     ~UdpStreamer();
 
-    bool initialize(const std::string& localIp, int localPort,
-                   const std::string& remoteIp, int remotePort);
-    bool sendBuffer(const Buffer& buffer);
-    bool receiveToBuffer(Buffer& buffer);
+    void Send(const char* data, size_t size);
+    size_t Receive(char* data, size_t max_size);
 
 private:
+    void initialize(const std::string& local_ip, int local_port,
+                    const std::string& remote_ip, int remote_port);
+
     int sockfd_;
+    bool isInitialized_;
+
     struct sockaddr_in localAddr_;
     struct sockaddr_in remoteAddr_;
-    bool isInitialized_;
 };
 
-#endif // UDPSTREAMER_H
+
+
+
+#endif //UDPSTREAMER_H
