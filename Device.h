@@ -24,6 +24,9 @@ private:
     void OpenDevice();
     void ConfigureDevice();
     void InitializeDevice();
+    void CleanupDevice();  // Новый метод для очистки
+    static void SignalHandler(int sig);  // Обработчик сигналов
+    static Device* currentInstance;  // Для обработки сигналов
 
 public:
     Device(const std::string &hw, snd_pcm_stream_t mode, snd_pcm_format_t format = SND_PCM_FORMAT_S16_LE,

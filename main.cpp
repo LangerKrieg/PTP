@@ -9,31 +9,20 @@
 
 std::atomic<bool> keepRunning(true);
 
-void signal_handler(int signum) {
+void signalHandler(int signum) {
+    std::cout << "Interrupt signal (" << signum << ") received\n";
     keepRunning = false;
 }
 
-void configure_audio_mixer()
+void configure_audio_mixer(int speakOrMicro)
 {
-    system("amixer -c 1 set 'Left HP Mixer Left DAC2',0 unmute");
-    system("amixer -c 1 set 'Left HP Mixer Left DAC1',0 unmute");
-    system("amixer -c 1 set 'Left ADC Mixer INB1',0 unmute");
-    system("amixer -c 1 set 'Left ADC Mixer INB2',0 unmute");
-    system("amixer -c 1 set 'INB',0 57%");
-    system("amixer -c 1 set 'Headphone',0 60%");
-
-    system("amixer -c 0 set 'Left HP Mixer Left DAC2',0 unmute");
-    system("amixer -c 0 set 'Left HP Mixer Left DAC1',0 unmute");
-    system("amixer -c 0 set 'Left ADC Mixer INB1',0 unmute");
-    system("amixer -c 0 set 'Left ADC Mixer INB2',0 unmute");
-    system("amixer -c 0 set 'INB',0 57%");
-    system("amixer -c 0 set 'Speaker',0 40%");
+    speakOrMicro == 1 ? system("alsactl -f phone_state.txt restore") : system("alsactl -f speaker_state.txt restore");
 }
 
 int main(int argc, char *argv[])
 {
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
 
     std::string hw_play_arg = argv[1];
     std::string hw_capture_arg = argv[2];
@@ -44,13 +33,9 @@ int main(int argc, char *argv[])
     std::string remote_ip_arg = argv[5];
     std::string remote_port_arg = argv[6];
 
-    if (std::stoi(argv[7]) == 1) {
-        configure_audio_mixer();
-    }
+    configure_audio_mixer(int(hw_play_arg[3]));
 
     try {
-
-
         Device captureDevice(hw_capture_arg, SND_PCM_STREAM_CAPTURE);
         Device playbackDevice(hw_play_arg, SND_PCM_STREAM_PLAYBACK);
 
@@ -67,6 +52,7 @@ int main(int argc, char *argv[])
                 buffer.WriteToDevice();
             }
         }
+
     }
     catch(const std::exception &e) {
         std::cerr << "Fatal error: " << e.what() << "\n";
