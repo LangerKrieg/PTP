@@ -34,12 +34,6 @@ Buffer::Buffer(const Device& capture_device,
     // Подготовка ALSA устройств
     snd_pcm_prepare(captureDevice_.GetHandle());
     snd_pcm_prepare(playbackDevice_.GetHandle());
-
-    snd_pcm_prepare(captureDevice_.GetHandle());
-    snd_pcm_prepare(playbackDevice_.GetHandle());
-    snd_pcm_drop(playbackDevice_.GetHandle()); // Сбросить буфер
-    snd_pcm_prepare(playbackDevice_.GetHandle()); // Переподготовить
-
 }
 
 // Конвертация формата ALSA в размер в байтах
@@ -128,10 +122,8 @@ snd_pcm_sframes_t Buffer::ReceiveFromUDP() {
     std::vector<char> temp(bytes);
 
     size_t received = gateway_.Receive(temp.data(), bytes);
-    std::cout << "Received from UDP: " << received << " bytes" << std::endl; // Debug
-
     if (received == 0) {
-        std::memset(temp.data(), 0, bytes);
+        std::memset(temp.data(), 0, bytes); // Тишина при отсутствии данных
     }
 
     // Запись в циркулярный буфер
@@ -151,16 +143,15 @@ snd_pcm_sframes_t Buffer::ReceiveFromUDP() {
 snd_pcm_sframes_t Buffer::WriteToDevice() {
     std::lock_guard<std::mutex> lock(bufferMutex_);
 
+    // Расчет доступных данных
     size_t available_bytes = (writeFromUdpPosition_ >= writeInAlsaPosition_)
         ? writeFromUdpPosition_ - writeInAlsaPosition_
         : bufferSize_ - (writeInAlsaPosition_ - writeFromUdpPosition_);
 
     size_t available_frames = snd_pcm_bytes_to_frames(playbackDevice_.GetHandle(), available_bytes);
 
-    std::cout << "Available frames for playback: " << available_frames << std::endl; // Debug
-
     if (available_frames >= framesPerPeriod_) {
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3; ++i) { // 3 попытки при ошибках
             auto* src = &buffer_[writeInAlsaPosition_];
             snd_pcm_sframes_t written = snd_pcm_writei(
                 playbackDevice_.GetHandle(),
@@ -171,12 +162,11 @@ snd_pcm_sframes_t Buffer::WriteToDevice() {
                 writeInAlsaPosition_ = (writeInAlsaPosition_ +
                     snd_pcm_frames_to_bytes(playbackDevice_.GetHandle(), written))
                     % bufferSize_;
-                std::cout << "Frames written to device: " << written << std::endl; // Debug
                 return written;
             }
 
             ErrorHandler(written, SND_PCM_STREAM_PLAYBACK);
-            usleep(100000);
+            usleep(100000); // Пауза 100ms при ошибке
         }
     }
     return 0;
